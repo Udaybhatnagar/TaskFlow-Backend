@@ -10,12 +10,26 @@ import taskRoutes from './modules/task/task.routes';
 
 const app = express();
 
-// Security middleware
-app.use(helmet());
+// CORS — allow local dev + deployed frontend
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  env.CLIENT_URL,
+].filter(Boolean);
+
 app.use(cors({
-  origin: env.CLIENT_URL,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS blocked: ${origin}`));
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+app.options('*', cors()); // Handle preflight
+app.use(helmet());
 
 // Body parser
 app.use(express.json({ limit: '10mb' }));
