@@ -10,26 +10,34 @@ import taskRoutes from './modules/task/task.routes';
 
 const app = express();
 
-// CORS — allow local dev + deployed frontend
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:5174',
-  env.CLIENT_URL,
-].filter(Boolean);
+// CORS — allow Vercel/Netlify deploys + local dev
+const ALLOWED_PATTERNS = [
+  /^https?:\/\/localhost(:\d+)?$/,           // localhost any port
+  /^https:\/\/.*\.vercel\.app$/,             // any Vercel preview/prod URL
+  /^https:\/\/.*\.netlify\.app$/,            // any Netlify URL
+  /^https:\/\/.*\.onrender\.com$/,           // Render frontends
+];
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, Postman, curl)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    callback(new Error(`CORS blocked: ${origin}`));
+const isAllowedOrigin = (origin: string): boolean => {
+  if (env.CLIENT_URL && origin === env.CLIENT_URL) return true;
+  return ALLOWED_PATTERNS.some(pattern => pattern.test(origin));
+};
+
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    if (!origin) return callback(null, true); // Postman / mobile / SSR
+    if (isAllowedOrigin(origin)) return callback(null, true);
+    console.warn(`[CORS] Blocked origin: ${origin}`);
+    callback(new Error(`CORS: origin ${origin} not allowed`));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-}));
-app.options('*', cors()); // Handle preflight
-app.use(helmet());
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Handle preflight for all routes
+app.use(helmet({ crossOriginResourcePolicy: false }));
 
 // Body parser
 app.use(express.json({ limit: '10mb' }));
