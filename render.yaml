@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: taskflow-api
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install && npx tsc --project tsconfig.json
+    startCommand: node dist/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGO_URI
+        sync: false
+      - key: ACCESS_TOKEN_SECRET
+        sync: false
+      - key: REFRESH_TOKEN_SECRET
+        sync: false
+      - key: ACCESS_TOKEN_EXPIRES_IN
+        value: 15m
+      - key: REFRESH_TOKEN_EXPIRES_IN
+        value: 7d
+      - key: CLIENT_URL
+        sync: false
